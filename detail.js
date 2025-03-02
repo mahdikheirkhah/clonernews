@@ -16,8 +16,8 @@ fetchStoryDetails(storyId).then(story => {
     console.error(error);
 });
 
-export async function fetchStoryDetails(storyId) {
-    const storyUrl = `${url}item/${storyId}.json`;
+async function fetchStoryDetails(storyId) {
+    const storyUrl = `${url}item/${storyId}.json?print=pretty`;
     try{
         const respons = await fetch(storyUrl);
         const storyParams = await respons.json();
@@ -33,14 +33,20 @@ function renderStoryDetails(story) {
     const authorElement = document.getElementById("story-author");
     const scoreElement = document.getElementById("story-score");
     const timeElement = document.getElementById("story-time");
-    const linkElement = document.getElementById("story-link");
-
+    if (story.url){
+        const linkElement = document.getElementById("story-link");
+        linkElement.innerHTML = `Link: <a href="${story.url}" target="_blank">${story.url}</a>`;
+    }
+    if (story.type === "poll"){
+        console.log(story.type);
+        renderPollOptions(story);
+    }
     // Update the elements with data from the story
     titleElement.innerHTML = `<a href="${story.url}" target="_blank">${story.title}</a>`;
     authorElement.innerHTML = `Author: ${capitalizeAuthor(story.by)}`;
     scoreElement.innerHTML = `Score: ${story.score}`;
     timeElement.innerHTML = `Time created: ${new Date(story.time * 1000).toLocaleString()}`; // Format time
-    linkElement.innerHTML = `Story Link: <a href="${story.url}" target="_blank">${story.url}</a>`;
+
     
     renderComments(story);
 }
@@ -54,48 +60,92 @@ function capitalizeAuthor(name) { // Proper format of the name.
 }
 
 function renderComments(story) {
-    const commentsContainer = document.getElementById("comments-container");
-    if (!story.kids || story.kids.length === 0 || !story.descendents) {
-        commentsContainer.innerHTML = "<h3>No comments available</h3>";
-        return;
-    }
-
-    commentsContainer.innerHTML = "<h3>Comments:<h3>";
-
-    Promise.all(story.kids.map(fetchComment))
-        .then(comments => comments.forEach(comment => renderEachComment(comment, commentsContainer)))
-        .catch(error => console.error(error));
-    };
+};
 
 async function fetchComment(commentId){
-    const response = await fetch(`${url}item/${commentId}.json`);
-    return await response.json();
+const response = await fetch(`${url}item/${commentId}.json`);
+return await response.json();
 }
 
 function renderEachComment(comment, container) {
-    if (!comment || comment.delete || comment.dead || !comment.by) return;
+if (!comment || comment.delete || comment.dead || !comment.by) return;
 
-    const commentElement = document.createElement('div');
-    commentElement.classList.add('comment');
+const commentElement = document.createElement('div');
+commentElement.classList.add('comment');
+
+const commentTime = new Date(comment.time * 1000).toLocaleString();
+commentElement.innerHTML = `
+    <div class="comment-content">
+        <strong>${capitalizeAuthor(comment.by)}</strong> commented: <em>${commentTime}</em>
+    </div>
+    <div class="comment-body">
+        <p>${comment.text}</p>
+    </div>
+`;
+if (comment.kids && comment.kids.length > 0) { 
+    const replyContainer = document.createElement('div');
+    replyContainer.classList.add('reply-container');
+    for (let replyId of comment.kids) {
+       fetchComment(replyId).then(reply => renderEachComment(reply, replyContainer));
+    }
+    commentElement.appendChild(replyContainer);
     
-    const commentTime = new Date(comment.time * 1000).toLocaleString();
-    commentElement.innerHTML = `
-        <div class="comment-content">
-            <strong>${capitalizeAuthor(comment.by)}</strong> commented: <em>${commentTime}</em>
-        </div>
-        <div class="comment-body">
-            <p>${comment.text}</p>
-        </div>
-    `;
-    if (comment.kids && comment.kids.length > 0) { 
-        const replyContainer = document.createElement('div');
-        replyContainer.classList.add('reply-container');
-        for (let replyId of comment.kids) {
-           fetchComment(replyId).then(reply => renderEachComment(reply, replyContainer));
-        }
-        commentElement.appendChild(replyContainer);
-        
+}
+
+container.appendChild(commentElement);
+}
+
+async function renderPollOptions(poll) {
+    const pollContainer = document.createElement("div");
+    pollContainer.classList.add("poll-container");
+
+    if (!poll.parts || poll.parts.length === 0) {
+        pollContainer.innerHTML = "<p>No poll options available.</p>";
+        return;
     }
 
-   container.appendChild(commentElement);
+    // Fetch all poll options
+    let pollOptions = await Promise.all(
+        poll.parts.map(async (id) => {
+            const response = await fetch(`${url}item/${id}.json`);
+            return await response.json();
+        })
+    );
+
+    // Filter out deleted or dead options
+    pollOptions = pollOptions.filter(option => !option.deleted && !option.dead);
+    if (pollOptions.length === 0) {
+        pollContainer.innerHTML = "<p>No valid poll options available.</p>";
+        return;
+    }
+
+    // Sort options by score (votes) and then by time (newest first)
+    pollOptions.sort((a, b) => b.score - a.score || b.time - a.time);
+
+    // Calculate total votes from valid options
+    const totalVotes = pollOptions.reduce((sum, option) => sum + option.score, 0) || 1; // Avoid division by zero
+
+    // Render poll options
+    pollOptions.forEach((option) => {
+        const percentage = ((option.score / totalVotes) * 100).toFixed(1);
+
+        const optionDiv = document.createElement("div");
+        optionDiv.classList.add("poll-option");
+
+        optionDiv.innerHTML = `
+            <div class="option-text">${option.text}</div>
+            <div class="progress-bar">
+                <div class="progress" style="width: ${percentage}%;"></div>
+            </div>
+            <div class="vote-info">
+                <span>${option.score} votes</span> | <span>${percentage}%</span>
+            </div>
+        `;
+
+        pollContainer.appendChild(optionDiv);
+    });
+
+    // Insert before comments
+    const commentsContainer = document.getElementById("comments-container");
+    document.body.insertBefore(pollContainer, commentsContainer);
 }

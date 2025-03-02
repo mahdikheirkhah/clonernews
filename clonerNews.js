@@ -1,42 +1,144 @@
-const startUrl = "https://hacker-news.firebaseio.com/v0/";
-
-let startId = 1; // Start from ID 10 (or any number you want initially)
-const batchSize = 10; // Load 10 items per request
+let startIndex = 0;
+let firstID = 0;
+let lastID = 0;
+let pollPageNumber = 0;
+let pollMaxPageNumber = 1; 
+let jobPageNumber = 0;
+let jobMaxPageNumber = 1; 
+const batchSize = 10;
+const url = "https://hacker-news.firebaseio.com/v0/";
 const container = document.getElementById("cards-container");
 const loadMoreButton = document.getElementById("loadMore");
 
+
 // Set to store IDs of failed fetches (unique values)
 let failedIds = new Set();
-let allFetchedItems = []; // Store all fetched items
+let addedID = new Set();
+let allFetchedItems = [];
+let allFetchedPolls = [];
+let allFetchedJobs = [];
 
-async function fetchItems() {
+
+async function fetchingData(url){
+    return fetch(url).then(res => res.ok ? res.json() : null).catch(() => null);
+}
+
+async function fetchPolls() {
     let fetchPromises = [];
-    let finalID = startId + batchSize;
-
-    // Fetch items up to the current `lastFetchedId`
-    for (let i= startId; i < finalID ; i++) {
-        // Only fetch the items that are not already fetched
-        const url = `${startUrl}item/${i}.json?print=pretty`;
-        fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
-    }
-    failedIds.forEach(value => {
-        const url = `${startUrl}item/${value}.json?print=pretty`;
-        fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
-    });
-
-    // Fetch all in parallel and handle both successful and failed promises
+    if (pollPageNumber <= pollMaxPageNumber){
+        const polls = await fetchingData(`https://hn.algolia.com/api/v1/search_by_date?page=${pollPageNumber}&tags=poll`)
+        const objectIDs = polls.hits.map(hit => hit.objectID);
+        pollMaxPageNumber = polls.nbPages;
+        pollPageNumber++;
+        for(let id of objectIDs){
+            fetchPromises.push(fetch(url+`item/${id}.json`).then(res => res.ok ? res.json() : null).catch(() => null));
+        }
+    
     const results = await Promise.allSettled(fetchPromises);
-
-    // Process results
     results.forEach(result => {
         if (result.status === 'fulfilled' && result.value) {
             const item = result.value;
-            if (!item.deleted && !item.dead && item.type !== "comment") {
-                allFetchedItems.push(item); // Add valid items
-                failedIds.delete(item.id); // Remove successful items from failedIds
+            if (!item.deleted && !item.dead && item.type === "poll") {
+                allFetchedPolls.push(item); 
             }
+        }
+    });
+    allFetchedPolls.sort((a, b) => b.time - a.time);
+
+
+    renderItems(allFetchedPolls);
+    }
+}
+
+async function fetchJobs() {
+    let fetchPromises = [];
+    if (jobPageNumber <= jobMaxPageNumber){
+        const jobs = await fetchingData(`https://hn.algolia.com/api/v1/search_by_date?page=${jobPageNumber}&tags=job`)
+        const objectIDs = jobs.hits.map(hit => hit.objectID);
+       jobMaxPageNumber = jobs.nbPages;
+        jobPageNumber++;
+        for(let id of objectIDs){
+            fetchPromises.push(fetch(url+`item/${id}.json`).then(res => res.ok ? res.json() : null).catch(() => null));
+        }
+    
+    const results = await Promise.allSettled(fetchPromises);
+    results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+            const item = result.value;
+            if (!item.deleted && !item.dead && item.type === "job") {
+                allFetchedJobs.push(item); 
+            }
+        }
+    });
+    allFetchedJobs.sort((a, b) => b.time - a.time);
+
+    renderItems(allFetchedJobs);
+    }
+}
+
+async function fetchStories() {
+    let fetchPromises = [];
+    let newID = await fetchingData(url + "newstories.json");
+    let size = newID.length;
+    let flagnewID = false;
+    if (firstID !== newID[0] && lastID !== 0){
+        flagnewID = true;
+    }
+    firstID = newID[0];
+    if (lastID === 0){
+        lastID = newID[size - 1];
+    }
+    
+    failedIds.forEach(value => {
+        const url = `https://hacker-news.firebaseio.com/v0/item/${value}.json`;
+        fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
+    });
+
+    if (size > startIndex){
+        let finalID = startIndex + batchSize;
+        for (let i = startIndex; i < finalID; i++) {
+            if(!addedID.has(newID[i])){
+                const url = `https://hacker-news.firebaseio.com/v0/item/${newID[i]}.json`;
+                fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
+            }
+        }
+    } else {
+        let finalID = Math.max(1, lastID - batchSize);
+        for (let i = lastID; i > finalID && i > 0; i--) {
+            console.log("i am here");
+            if(!addedID.has(i)){
+                console.log("hello");
+                const url = `https://hacker-news.firebaseio.com/v0/item/${i}.json`;
+                fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
+            }
+        }
+        lastID -= batchSize;
+    }
+    if (flagnewID){
+        let i = 0;
+        while(!addedID.has(newID[i]) && i < size){
+            const url = `https://hacker-news.firebaseio.com/v0/item/${newID[i]}.json`;
+            fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
+            i++;
+        }
+    }
+
+    const results = await Promise.allSettled(fetchPromises);
+
+    results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+            const item = result.value;
+            if (!item.deleted && !item.dead && item.type === "story") {
+                allFetchedItems.push(item);
+                failedIds.delete(item.id); 
+            }else{
+                console.log(item.type);
+                console.log(item.delete);
+                console.log(item.dead);
+            }
+            addedID.add(item.id);
         } else {
-            // Failed request, store the failed ID for next time
+
             const failedId = result.reason ? result.reason.id : null;
             if (failedId) {
                 failedIds.add(failedId);
@@ -44,14 +146,11 @@ async function fetchItems() {
         }
     });
 
-    // Sort all items by time (newest first)
     allFetchedItems.sort((a, b) => b.time - a.time);
 
-    // Render the sorted items
     renderItems(allFetchedItems);
 
-    // Update the `lastFetchedId` for the next batch
-    startId += batchSize;
+    startIndex += batchSize;
 }
 
 function renderItems(items) {
@@ -65,7 +164,7 @@ function renderItems(items) {
             <h2>${item.title}</h2>
             <p>Type: ${item.type}</p>
             <p>Created by: ${item.by}</p>
-            <p>Date: ${new Date(item.time * 1000)}</p>
+            <p>Date: ${new Date(item.time * 1000).toLocaleString()}</p>
         `;
         card.addEventListener('click', () => {
             window.location.href = `detail.html?id=${item.id}`;
@@ -77,11 +176,61 @@ function renderItems(items) {
 }
 
 // Load more when the user clicks the button
-loadMoreButton.addEventListener("click", fetchItems);
+loadMoreButton.addEventListener("click", ()=>{
+    changeContent(getURL());
+});
 window.addEventListener("scroll", () => {
     if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1) {
-        fetchItems();
+        changeContent(getURL());
     }
 });
-// Initial load
-fetchItems();
+
+
+window.addEventListener('popstate', () => {
+    changeContent(getURL(),true);
+});
+
+
+function changeContent(type , isToggeld = false) {
+    // Update the URL query parameter without reloading
+    history.pushState({}, '', `?type=${type}`);
+    
+
+    // Load new content based on type
+    if (type === 'stories') {
+        if(isToggeld){
+            startIndex = 0;
+            firstID = 0;
+            lastID = 0;
+            allFetchedItems = [];
+            failedIds = new Set();
+            addedID = new Set();
+        }
+        fetchStories();
+    } else if (type === 'jobs') {
+        if(isToggeld){
+            jobPageNumber = 0;
+            jobMaxPageNumber = 1;
+            allFetchedJobs = [];
+        }
+        fetchJobs(); 
+    } else if (type === 'polls') {
+        if(isToggeld){
+            pollPageNumber = 0;
+            pollMaxPageNumber = 1;
+            allFetchedPolls = [];
+        }
+        fetchPolls();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    type = getURL();
+    changeContent(type);
+});
+
+function getURL(){
+    const urlParams = new URLSearchParams(window.location.search);
+    const type = urlParams.get('type') || 'stories';
+    return type;
+}
