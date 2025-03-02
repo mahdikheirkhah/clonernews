@@ -21,6 +21,11 @@ button {
     border-radius: 5px;
 }
 
+button:hover {
+    background-color: #007bff;
+    color: white;
+}
+
 main {
     display: flex;
     flex-direction: column;
@@ -54,24 +59,26 @@ main {
     background: #007bff;
     color: white;
     font-weight: bold;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#loadMore:hover {
+    background: #0056b3;
 }
 
 .comment {
     position: relative;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
     margin-left: 20px;
-    padding-left: 10px;
+    background: white;
+    border-radius: 8px;
     border-left: 1.5px solid lightgrey;
- 
-}
-.comment::after {
-    content: '';
-    position: absolute;
-    bottom: -17px;
-    left: 15px; 
-    width: calc(100% - 10px); /* Make the bottom line stretch across the entire width minus the left padding */
-    height: 1px;
-    background-color: lightgrey;
+    box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+    width: 80%;
+    max-width: 1200px;
+    padding: 15px;
 }
 .comment-header {
     font-weight: bold;
@@ -79,8 +86,9 @@ main {
 }
 
 .comment-body {
-    margin-top: 5px;
+    margin-top: 10px;
     margin-left: 20px;
+  
 }
 
 .replies {
@@ -88,6 +96,12 @@ main {
     border-left: 2px solid #ccc;
     padding-left: 10px;
 }
+.reply-container {
+    display: flex;
+    flex-direction: column;
+    
+}
+
 
 .reply-container .comment {
     margin-top: 10px;

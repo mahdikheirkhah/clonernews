@@ -55,7 +55,7 @@ function capitalizeAuthor(name) { // Proper format of the name.
 
 function renderComments(story) {
     const commentsContainer = document.getElementById("comments-container");
-    if (!story.kids || story.kids.length === 0) {
+    if (!story.kids || story.kids.length === 0 || !story.descendents) {
         commentsContainer.innerHTML = "<h3>No comments available</h3>";
         return;
     }
@@ -73,7 +73,7 @@ async function fetchComment(commentId){
 }
 
 function renderEachComment(comment, container) {
-    if (!comment || comment.delete ) return;
+    if (!comment || comment.delete || comment.dead || !comment.by) return;
 
     const commentElement = document.createElement('div');
     commentElement.classList.add('comment');
