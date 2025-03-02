@@ -38,6 +38,8 @@ main {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 20px;
     width: 80%;
+    margin-left: 240px; /* Move cards to the right to avoid overlap */
+    width: calc(100% - 260px); 
     max-width: 1200px;
 }
 
@@ -67,6 +69,56 @@ main {
 #loadMore:hover {
     background: #0056b3;
 }
+
+#updates-container {
+    position: fixed;
+    top: 75px;
+    left: 0;
+    width: 160px;
+    max-height: calc(100vh);
+    background: white;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    border-right: 2px solid #ddd;
+    border-top-right-radius: 10px; /* Curve top-right corner */
+    border-bottom-right-radius: 10px;
+    z-index: 10; 
+}
+
+/* Optional: Improve the scrollbar styling */
+#updates-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#updates-container::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 4px;
+}
+
+#updates-container h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+#updates-list {
+    list-style: none;
+    padding: 0;
+    font-size: 14px;
+    max-height: calc(100vh - 90px); /* Ensures list fits within the container */
+    overflow-y: auto;
+}
+
+#updates-list li {
+    margin-bottom: 8px;
+}
+
+#updates-list a {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: bold;
+}
+
 
 .comment {
     position: relative;
@@ -106,3 +158,4 @@ main {
 .reply-container .comment {
     margin-top: 10px;
 }
+

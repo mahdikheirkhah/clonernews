@@ -16,8 +16,8 @@ fetchStoryDetails(storyId).then(story => {
     console.error(error);
 });
 
-async function fetchStoryDetails(storyId) {
-    const storyUrl = `${url}item/${storyId}.json?print=pretty`;
+export async function fetchStoryDetails(storyId) {
+    const storyUrl = `${url}item/${storyId}.json`;
     try{
         const respons = await fetch(storyUrl);
         const storyParams = await respons.json();
