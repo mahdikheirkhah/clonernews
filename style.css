@@ -1,4 +1,4 @@
-body {
+body{
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
@@ -54,4 +54,41 @@ main {
     background: #007bff;
     color: white;
     font-weight: bold;
+}
+
+.comment {
+    position: relative;
+    margin-bottom: 30px;
+    margin-left: 20px;
+    padding-left: 10px;
+    border-left: 1.5px solid lightgrey;
+ 
+}
+.comment::after {
+    content: '';
+    position: absolute;
+    bottom: -17px;
+    left: 15px; 
+    width: calc(100% - 10px); /* Make the bottom line stretch across the entire width minus the left padding */
+    height: 1px;
+    background-color: lightgrey;
+}
+.comment-header {
+    font-weight: bold;
+    margin-left: 20px;
+}
+
+.comment-body {
+    margin-top: 5px;
+    margin-left: 20px;
+}
+
+.replies {
+    margin-left: 20px;
+    border-left: 2px solid #ccc;
+    padding-left: 10px;
+}
+
+.reply-container .comment {
+    margin-top: 10px;
 }

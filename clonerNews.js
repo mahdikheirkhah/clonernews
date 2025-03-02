@@ -1,3 +1,5 @@
+const startUrl = "https://hacker-news.firebaseio.com/v0/";
+
 let startId = 1; // Start from ID 10 (or any number you want initially)
 const batchSize = 10; // Load 10 items per request
 const container = document.getElementById("cards-container");
@@ -14,11 +16,11 @@ async function fetchItems() {
     // Fetch items up to the current `lastFetchedId`
     for (let i= startId; i < finalID ; i++) {
         // Only fetch the items that are not already fetched
-        const url = `https://hacker-news.firebaseio.com/v0/item/${i}.json?print=pretty`;
+        const url = `${startUrl}item/${i}.json?print=pretty`;
         fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
     }
     failedIds.forEach(value => {
-        const url = `https://hacker-news.firebaseio.com/v0/item/${value}.json?print=pretty`;
+        const url = `${startUrl}item/${value}.json?print=pretty`;
         fetchPromises.push(fetch(url).then(res => res.ok ? res.json() : null).catch(() => null));
     });
 
